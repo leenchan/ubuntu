@@ -1,8 +1,8 @@
 #!/bin/sh
 
-action_ssh() {
-	[ -z "$PASSWORD" ] && return 1
-	sudo sh -c "echo '$PASSWORD:$PASSWORD' | tr ':' '\n' | passwd"
+ssh_restart() {
+	[ -z "$ROOT_PASSWORD" ] && return 1
+	sudo sh -c "echo '$ROOT_PASSWORD::::$ROOT_PASSWORD' | awk -F'::::' '{print $1"\n"$2}' | passwd"
 	sudo sh -c "sed \
 		-e '/^[Pp]ort[^s]/d' \
 		-e '/PasswordAuthentication/d' \
@@ -23,5 +23,4 @@ action_ssh() {
 	sudo sh -c "systemctl restart sshd"
 }
 
-action_ssh
-env
+ssh_restart

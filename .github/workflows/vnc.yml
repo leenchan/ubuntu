@@ -2,13 +2,15 @@ name: Ubuntu VNC
 
 on:
   workflow_dispatch:
+  # schedule:
+  #   - cron: 0 20 * * *
 
 env:
   COON_CLI_URL: ${{ secrets.COON_CLI_URL }}
-  PASSWORD: ${{ secrets.PASSWORD }}
+  ROOT_PASSWORD: ${{ secrets.ROOT_PASSWORD }}
+  VNC_PASSWORD: ${{ secrets.VNC_PASSWORD }}
   FRP_SERVER: ${{ secrets.FRP_SERVER }}
   FRP_TOKEN: ${{ secrets.FRP_TOKEN }}
-  FRP_REMOTE_PORT: ${{ secrets.FRP_REMOTE_PORT }}
   OPENP2P_TOKEN: ${{ secrets.OPENP2P_TOKEN }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -16,47 +18,47 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      DATA_DIR: /home/runner/data
+      SCRIPT_DIR: ./.github/workflows/scripts
+      TIMEZONE: Asia/Shanghai
     steps:
     - uses: actions/checkout@master
     - name: Initialize
       run: |
-        pwd
-        ls
-        [ -z "$PASSWORD" ] && echo "PASSWORD=_password_" >> $GITHUB_ENV
-        mkdir -p $DATA_DIR
-        [ -z "$COON_CLI_URL" ] || {
-          sudo curl -skL -o /usr/bin/coon-cli "$COON_CLI_URL" && sudo chmod +x /usr/bin/coon-cli && echo "COON_CLI_BIN=/usr/bin/coon-cli" >> $GITHUB_ENV
-        }
-        [ -z "${{ env.TIMEZONE }}" ] && sudo -E timedatectl set-timezone "Asia/Shanghai" || sudo -E timedatectl set-timezone "${{ env.TIMEZONE }}"
+        [ -z "$ROOT_PASSWORD" ] && echo "ROOT_PASSWORD=_password_" >> $GITHUB_ENV
+        [ -z "${{ env.TIMEZONE }}" ] || sudo -E timedatectl set-timezone "${{ env.TIMEZONE }}"
         sudo apt-get update && sudo apt-get install wget curl supervisor jq inotify-tools
-        sh ./.github/workflows/action.sh
-    - name: Cache Files
-      uses: actions/cache@v3
-      env:
-        cache-name: cache-files
-      with:
-        path: |
-          /etc/dropbear
-        key: ${{ runner.os }}-build-${{ env.cache-name }}
-        restore-keys: |
-          ${{ runner.os }}-build-
+    - name: coon-cli
+      run: |
+        sh $SCRIPT_DIR/coon-cli.sh
+    # - name: Cache Files
+    #   uses: actions/cache@v3
+    #   env:
+    #     cache-name: cache-files
+    #   with:
+    #     path: |
+    #       /home/runner/work
+    #     key: ${{ runner.os }}-build-${{ env.cache-name }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-build-
+    - name: Change Root Password / Restart SSH
+      run: |
+        sh $SCRIPT_DIR/ssh.sh
+      if: ${{ env.ROOT_PASSWORD != '' }}
     - name: Connect to OpenP2P
       run: |
-        sudo curl -k -o install.sh "https://openp2p.cn/download/v1/latest/install.sh" && sudo bash ./install.sh --token ${{ env.OPENP2P_TOKEN }}
+        sh $SCRIPT_DIR/openp2p.sh
       if: ${{ env.OPENP2P_TOKEN != '' }}
     - name: Connect to FRP Server
+      env:
+        FRP_PORTS: 5901:15910+,22:10082+
       run: |
-        echo "::add-mask::$(echo $FRP_SERVER | awk -F':' '{print $1}' | grep -Eo '[^.]+\.[^.]+$')"
-        sudo $COON_CLI_BIN frp install
-        sudo $COON_CLI_BIN frp client -s $FRP_SERVER -l 127.0.0.1:5901 -p ${FRP_REMOTE_PORT:-15910+} -T $FRP_TOKEN
-      if: ${{ env.FRP_SERVER != '' && env.COON_CLI_BIN != '' }}
-    - name: Main
+        sh $SCRIPT_DIR/frp.sh
+      if: ${{ env.FRP_SERVER != '' }}
+    - name: VNC Server
       run: |
-        env > $HOME/.env
-        sudo VNC_PWD="${PASSWORD:-_password_}" DESKTOP_ENV="xfce" $COON_CLI_BIN install aria2 vnc desktop
-      if: ${{ env.COON_CLI_BIN != '' }}
-    - name: Delete workflow runs
+        sh $SCRIPT_DIR/vnc.sh
+      if: ${{ env.VNC_PASSWORD != '' }}
+    - name: Delete Workflow Runs
       uses: Mattraks/delete-workflow-runs@v2
       with:
         token: ${{ github.token }}
@@ -65,17 +67,11 @@ jobs:
         keep_minimum_runs: 0
     - name: Wait
       run: |
-        while true
-        do
-          sleep 1
-          [ -f "/tmp/done" ] && exit 0
-          [ -f "/tmp/error" ] && echo "::error::$(cat /tmp/error)" && exit 1
-        done
-#       sleep 86400 || true
-#     - uses: actions/upload-artifact@master
-#       with:
-#         name: Upload
-#         path: /home/runner/data
-#         env-url: DOWNLOAD_URL
-#     - name: Use URL for something
-#       run: echo "${{ env.DOWNLOAD_URL }}"
+        sh $SCRIPT_DIR/wait.sh
+    # - uses: actions/upload-artifact@master
+    #   with:
+    #     name: Upload
+    #     path: /home/runner/data
+    #     env-url: DOWNLOAD_URL
+    # - name: Use URL for something
+    #   run: echo "${{ env.DOWNLOAD_URL }}"
