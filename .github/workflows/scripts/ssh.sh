@@ -2,7 +2,7 @@
 
 ssh_restart() {
 	[ -z "$ROOT_PASSWORD" ] && return 1
-	sudo sh -c "echo '${ROOT_PASSWORD}::::${ROOT_PASSWORD}' | awk -F'::::' '{print $1"\n"$2"\n"}' | passwd root"
+	sudo sh -c "echo '${ROOT_PASSWORD}::::${ROOT_PASSWORD}' | sed 's/::::/\\n/' | passwd root"
 	sudo sh -c "sed \
 		-e '/^[Pp]ort[^s]/d' \
 		-e '/PasswordAuthentication/d' \
