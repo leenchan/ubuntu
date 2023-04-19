@@ -2,7 +2,7 @@
 
 ssh_restart() {
 	[ -z "$ROOT_PASSWORD" ] && return 1
-	sudo sh -c "echo '$ROOT_PASSWORD::::$ROOT_PASSWORD' | awk -F'::::' '{print $1"\n"$2}' | passwd"
+	sudo sh -c "echo '${ROOT_PASSWORD}::::${ROOT_PASSWORD}' | awk -F'::::' '{print $1"\n"$2"\n"}' | passwd root"
 	sudo sh -c "sed \
 		-e '/^[Pp]ort[^s]/d' \
 		-e '/PasswordAuthentication/d' \
@@ -19,7 +19,7 @@ ssh_restart() {
 		UsePAM yes
 		TCPKeepAlive yes
 		ClientAliveInterval 360
-		ClientAliveCountMax 20' > /etc/ssh/sshd_config"
+		ClientAliveCountMax 20' >> /etc/ssh/sshd_config"
 	sudo sh -c "systemctl restart sshd"
 }
 
