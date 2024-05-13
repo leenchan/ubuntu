@@ -54,10 +54,10 @@ jobs:
     #   run: |
     #     sh $SCRIPT_DIR/frp.sh
     #   if: ${{ env.FRP_SERVER != '' }}
-    - name: VNC Server
-      run: |
-        sh $SCRIPT_DIR/vnc.sh
-      if: ${{ env.VNC_PASSWORD != '' }}
+    # - name: VNC Server
+    #   run: |
+    #     sh $SCRIPT_DIR/vnc.sh
+    #   if: ${{ env.VNC_PASSWORD != '' }}
     - name: Delete Workflow Runs
       uses: Mattraks/delete-workflow-runs@v2
       with:
