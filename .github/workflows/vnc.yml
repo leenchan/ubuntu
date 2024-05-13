@@ -48,12 +48,12 @@ jobs:
       run: |
         sh $SCRIPT_DIR/openp2p.sh
       if: ${{ env.OPENP2P_TOKEN != '' }}
-    - name: Connect to FRP Server
-      env:
-        FRP_PORTS: 5901:15910+,22:10082+
-      run: |
-        sh $SCRIPT_DIR/frp.sh
-      if: ${{ env.FRP_SERVER != '' }}
+    # - name: Connect to FRP Server
+    #   env:
+    #     FRP_PORTS: 5901:15910+,22:10082+
+    #   run: |
+    #     sh $SCRIPT_DIR/frp.sh
+    #   if: ${{ env.FRP_SERVER != '' }}
     - name: VNC Server
       run: |
         sh $SCRIPT_DIR/vnc.sh
